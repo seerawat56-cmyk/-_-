@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมจับคู่สำนวนไทย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Kanit', sans-serif; }
+        .card-flip {
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .card-flip.flipped {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .matched {
+            animation: bounce 0.6s ease-in-out;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* ทำให้รูปภาพพอดีกับการ์ด */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-200 via-purple-200 to-blue-200 min-h-screen">
+    <div class="container mx-auto px-4 py-6">
+        <div class="text-center mb-6">
+            <h1 class="text-4xl font-bold text-purple-800 mb-2">🎯 เกมจับคู่สำนวนไทย 🎯</h1>
+            <p class="text-lg text-purple-600">จับคู่ภาพกับสำนวนไทยให้ถูกต้อง!</p>
+        </div>
+
+        <div class="flex justify-center items-center gap-8 mb-6">
+            <div class="bg-white rounded-full px-6 py-3 shadow-lg">
+                <span class="text-lg font-semibold text-purple-800">⏰ เวลา: </span>
+                <span id="timer" class="text-xl font-bold text-red-600">30</span>
+                <span class="text-lg text-purple-800"> วินาที</span>
+            </div>
+            <div class="bg-white rounded-full px-6 py-3 shadow-lg">
+                <span class="text-lg font-semibold text-purple-800">⭐ คะแนน: </span>
+                <span id="score" class="text-xl font-bold text-green-600">0</span>
+            </div>
+            <div class="bg-white rounded-full px-6 py-3 shadow-lg">
+                <span class="text-lg font-semibold text-purple-800">🎯 จับคู่แล้ว: </span>
+                <span id="matched" class="text-xl font-bold text-blue-600">0</span>
+                <span class="text-lg text-purple-800">/6</span>
+            </div>
+        </div>
+
+        <div id="startScreen" class="text-center mb-8">
+            <div class="bg-white rounded-3xl p-8 shadow-2xl max-w-md mx-auto">
+                <div class="text-6xl mb-4">🎮</div>
+                <h2 class="text-2xl font-bold text-purple-800 mb-4">พร้อมเล่นแล้วหรือยัง?</h2>
+                <p class="text-purple-600 mb-6">จับคู่ภาพกับสำนวนไทยให้ถูกต้องภายใน 30 วินาที!</p>
+                <button id="startBtn" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-full text-xl font-bold hover:from-purple-600 hover:to-pink-600 transform hover:scale-105 transition-all duration-300 pulse">
+                    🚀 เริ่มเกม!
+                </button>
+            </div>
+        </div>
+
+        <div id="gameBoard" class="hidden">
+            <div class="grid grid-cols-4 gap-4 max-w-4xl mx-auto">
+                </div>
+        </div>
+
+        <div id="gameOverScreen" class="hidden text-center">
+            <div class="bg-white rounded-3xl p-8 shadow-2xl max-w-md mx-auto">
+                <div id="gameOverIcon" class="text-6xl mb-4">🎉</div>
+                <h2 id="gameOverTitle" class="text-2xl font-bold text-purple-800 mb-4">เก่งมาก!</h2>
+                <p id="gameOverMessage" class="text-purple-600 mb-4">คุณได้คะแนน <span id="finalScore" class="font-bold text-green-600">0</span> คะแนน</p>
+                <button id="playAgainBtn" class="bg-gradient-to-r from-green-500 to-blue-500 text-white px-8 py-4 rounded-full text-xl font-bold hover:from-green-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-300">
+                    🔄 เล่นอีกครั้ง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class MemoryGame {
+            constructor() {
+                this.cards = [
+                    // สามารถแก้ไข เพิ่ม หรือลบคู่นี้ได้ตามต้องการ
+                    { id:1, type: 'text', content: 'จับปลาสองมือ',pair: 2 },
+                    { id:2, type: 'image', content: 'https://i.postimg.cc/52NCsTQM/fish-2.jpg', pair: 1 },
+                    { id:3, name: 'งมเข็มในมหาสมุทร', type:'text',content: 'งมเข็มในมหาสมุทร',pair: 4},
+                    { id:4, name:'งมเข็มในมหาสมุทรง', type:'image',content:'https://i.postimg.cc/FKk1q49w/sea.jpg',pair:3},
+                    { id:5, name: 'ชักแม่น้ำทั้งห้า', type:'text',content: 'ชักแม่น้ำทั้งห้า',pair: 6},
+                    { id:6, name:'ชักแม่น้ำทั้งห้า', type:'image',content:'https://i.postimg.cc/02jSfp1W/rive5.png',pair:5},
+                    { id:7, name: 'ไก่เห็นตีนงู งูเห็นนมไก่', type:'text',content: 'ไก่เห็นตีนงู งูเห็นนมไก่',pair: 8},
+                    { id:8, name:'ไก่เห็นตีนงู งูเห็นนมไก่', type:'image',content:'https://i.postimg.cc/Lsj2L644/chik-shank.jpg',pair:7},
+                    { id:9, name: 'มือไม่พายเอาเท้าราน้ำ', type:'text',content: 'มือไม่พายเอาเท้าราน้ำ',pair: 10},
+                    { id:10, name:'มือไม่พายเอาเท้าราน้ำ', type:'image',content:'https://i.postimg.cc/yYWKnT6b/bote-2.jpg',pair:9},
+                    { id:11, name: 'น้ำท่วมปาก', type:'text',content: 'น้ำท่วมปาก',pair: 12},
+                    { id:12, name:'น้ำท่วมปาก', type:'image',content:'https://i.postimg.cc/X7ZM97QM/man-water.jpg',pair:11},
+                    // ตัวอย่างการเพิ่มการ์ดคู่ใหม่
+                    // { id: 13, type: 'image', content: 'https://images.unsplash.com/photo-1546961342-ea58853d9175?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', pair: 14 },
+                    // { id: 14, type: 'text', content: 'นกขมิ้น', pair: 13 },
+                    // { id: 15, type: 'image', content: 'https://images.unsplash.com/photo-1555132205-b82b952a514d?q=80&w=1770&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', pair: 16 },
+                    // { id: 16, type: 'text', content: 'กวาง', pair: 15 }
+                ];
+                
+                this.flippedCards = [];
+                this.matchedPairs = [];
+                this.score = 0;
+                this.timeLeft = 30;
+                this.gameActive = false;
+                this.timer = null;
+                
+                this.initializeElements();
+                this.bindEvents();
+            }
+            
+            initializeElements() {
+                this.startScreen = document.getElementById('startScreen');
+                this.gameBoard = document.getElementById('gameBoard');
+                this.gameOverScreen = document.getElementById('gameOverScreen');
+                this.startBtn = document.getElementById('startBtn');
+                this.playAgainBtn = document.getElementById('playAgainBtn');
+                this.timerEl = document.getElementById('timer');
+                this.scoreEl = document.getElementById('score');
+                this.matchedEl = document.getElementById('matched');
+                this.finalScoreEl = document.getElementById('finalScore');
+                this.gameOverIcon = document.getElementById('gameOverIcon');
+                this.gameOverTitle = document.getElementById('gameOverTitle');
+                this.gameOverMessage = document.getElementById('gameOverMessage');
+            }
+            
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.startGame());
+                this.playAgainBtn.addEventListener('click', () => this.resetGame());
+            }
+            
+            shuffleArray(array) {
+                const shuffled = [...array];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                return shuffled;
+            }
+            
+            startGame() {
+                this.startScreen.classList.add('hidden');
+                this.gameBoard.classList.remove('hidden');
+                this.gameActive = true;
+                this.createBoard();
+                this.startTimer();
+                this.updateMatchedCount(); // อัปเดตจำนวนคู่ทั้งหมดที่ต้องจับคู่
+            }
+            
+            createBoard() {
+                const shuffledCards = this.shuffleArray(this.cards);
+                const boardEl = this.gameBoard.querySelector('.grid');
+                boardEl.innerHTML = '';
+                
+                // คำนวณจำนวนคอลัมน์ใหม่ตามจำนวนการ์ด
+                let gridColsClass = 'grid-cols-4';
+                if (this.cards.length <= 8) {
+                    gridColsClass = 'grid-cols-4';
+                } else if (this.cards.length <= 12) {
+                    gridColsClass = 'grid-cols-4';
+                } else {
+                    gridColsClass = 'grid-cols-6'; // เพิ่มคอลัมน์ถ้าการ์ดเยอะขึ้น
+                }
+                boardEl.className = `grid ${gridColsClass} gap-4 max-w-4xl mx-auto`;
+                
+                shuffledCards.forEach(card => {
+                    const cardEl = this.createCardElement(card);
+                    boardEl.appendChild(cardEl);
+                });
+            }
+            
+            createCardElement(card) {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'relative w-full h-32 cursor-pointer';
+                cardEl.dataset.cardId = card.id;
+                
+                // สร้างเนื้อหาด้านหลังของการ์ด
+                let backContent = '';
+                if (card.type === 'image') {
+                    // ตรวจสอบว่าเป็น URL หรือ Emoji
+                    const isUrl = card.content.startsWith('http') || card.content.startsWith('https');
+                    if (isUrl) {
+                        backContent = `<img src="${card.content}" alt="card image" class="card-image w-full h-full object-contain">`;
+                    } else {
+                        backContent = `<div class="text-5xl">${card.content}</div>`;
+                    }
+                } else {
+                    backContent = `<div class="text-center text-sm font-bold text-purple-800 leading-tight">${card.content}</div>`;
+                }
+
+                cardEl.innerHTML = `
+                    <div class="card-flip w-full h-full">
+                        <div class="card-front bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl shadow-lg flex items-center justify-center">
+                            <div class="text-4xl">❓</div>
+                        </div>
+                        <div class="card-back bg-white rounded-xl shadow-lg flex items-center justify-center p-2 border-4 ${card.type === 'image' ? 'border-yellow-400' : 'border-blue-400'}">
+                            ${backContent}
+                        </div>
+                    </div>
+                `;
+                
+                cardEl.addEventListener('click', () => this.flipCard(cardEl, card));
+                return cardEl;
+            }
+            
+            flipCard(cardEl, card) {
+                if (!this.gameActive || this.flippedCards.length >= 2 || 
+                    cardEl.querySelector('.card-flip').classList.contains('flipped') ||
+                    this.matchedPairs.includes(card.id)) {
+                    return;
+                }
+                
+                cardEl.querySelector('.card-flip').classList.add('flipped');
+                this.flippedCards.push({ element: cardEl, card: card });
+                
+                if (this.flippedCards.length === 2) {
+                    setTimeout(() => this.checkMatch(), 600);
+                }
+            }
+            
+            checkMatch() {
+                const [first, second] = this.flippedCards;
+                
+                if (first.card.pair === second.card.id) {
+                    this.score += 1;
+                    this.matchedPairs.push(first.card.id, second.card.id);
+                    
+                    first.element.classList.add('matched');
+                    second.element.classList.add('matched');
+                    
+                    this.updateScore();
+                    
+                    if (this.matchedPairs.length === this.cards.length) {
+                        this.endGame(true);
+                    }
+                } else {
+                    first.element.querySelector('.card-flip').classList.remove('flipped');
+                    second.element.querySelector('.card-flip').classList.remove('flipped');
+                }
+                
+                this.flippedCards = [];
+            }
+            
+            startTimer() {
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    this.timerEl.textContent = this.timeLeft;
+                    
+                    if (this.timeLeft <= 10) {
+                        this.timerEl.parentElement.classList.add('animate-pulse');
+                    }
+                    
+                    if (this.timeLeft <= 0) {
+                        this.endGame(false);
+                    }
+                }, 1000);
+            }
+            
+            updateScore() {
+                this.scoreEl.textContent = this.score;
+                this.matchedEl.textContent = this.matchedPairs.length / 2;
+            }
+
+            updateMatchedCount() {
+                this.matchedEl.nextElementSibling.textContent = `/${this.cards.length / 2}`;
+            }
+            
+            endGame(won) {
+                this.gameActive = false;
+                clearInterval(this.timer);
+                
+                setTimeout(() => {
+                    this.gameBoard.classList.add('hidden');
+                    this.gameOverScreen.classList.remove('hidden');
+                    
+                    this.finalScoreEl.textContent = this.score;
+                    
+                    if (won) {
+                        this.gameOverIcon.textContent = '🎉';
+                        this.gameOverTitle.textContent = 'ยอดเยี่ยม!';
+                        this.gameOverMessage.innerHTML = `คุณจับคู่ได้ครบทุกคู่! ได้คะแนน <span class="font-bold text-green-600">${this.score}</span> คะแนน`;
+                    } else if (this.score >= this.cards.length / 2 - 2) {
+                        this.gameOverIcon.textContent = '😊';
+                        this.gameOverTitle.textContent = 'เก่งมาก!';
+                        this.gameOverMessage.innerHTML = `คุณทำได้ดีแล้ว! ได้คะแนน <span class="font-bold text-green-600">${this.score}</span> คะแนน`;
+                    } else {
+                        this.gameOverIcon.textContent = '😅';
+                        this.gameOverTitle.textContent = 'ลองใหม่นะ!';
+                        this.gameOverMessage.innerHTML = `ไม่เป็นไร ลองเล่นอีกครั้ง! ได้คะแนน <span class="font-bold text-orange-600">${this.score}</span> คะแนน`;
+                    }
+                }, 1000);
+            }
+            
+            resetGame() {
+                this.flippedCards = [];
+                this.matchedPairs = [];
+                this.score = 0;
+                this.timeLeft = 30;
+                this.gameActive = false;
+                
+                this.scoreEl.textContent = '0';
+                this.matchedEl.textContent = '0';
+                this.timerEl.textContent = '30';
+                this.timerEl.parentElement.classList.remove('animate-pulse');
+                
+                this.gameOverScreen.classList.add('hidden');
+                this.startScreen.classList.remove('hidden');
+                
+                if (this.timer) {
+                    clearInterval(this.timer);
+                }
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            new MemoryGame();
+        });
+    </script>
+</body>
+</html>
